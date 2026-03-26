@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Fields: uid, displayName, email, age, height, weight, bodyFat, class, goal, level, xp, rank, stats, streak, lastWorkout, mana, auraDensity, manaCore
+    //
+    // Collection: /users/{userId}/workouts/{workoutId}
+    // Fields: uid, date, type, duration, exercises, totalXp, calories
+    //
+    // Collection: /users/{userId}/quests/{questId}
+    // Fields: uid, title, description, type, status, rewardXp, deadline
+    //
+    // Collection: /users/{userId}/nutrition/{nutritionId}
+    // Fields: uid, date, calories, protein, fats, carbs, water
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.uid is string &&
+             data.level is int &&
+             data.xp is int &&
+             data.rank is string &&
+             (!('gender' in data) || data.gender in ['Male', 'Female', 'Other']) &&
+             (!('personality' in data) || data.personality in ['strict', 'sigma', 'chad', 'humble']) &&
+             (!('units' in data) || data.units in ['metric', 'imperial']);
+    }
+
+    function isValidWorkout(data) {
+      return data.keys().hasAll(['uid', 'date', 'totalXp']) &&
+             data.uid is string &&
+             data.totalXp is int;
+    }
+
+    function isValidQuest(data) {
+      return data.keys().hasAll(['uid', 'title', 'status']) &&
+             data.uid is string &&
+             data.title is string &&
+             data.status in ['Active', 'Completed', 'Failed'];
+    }
+
+    function isValidNutrition(data) {
+      return data.keys().hasAll(['uid', 'date']) &&
+             data.uid is string;
+    }
+
+    function isValidMealPlan(data) {
+      return data.keys().hasAll(['uid', 'date', 'breakfast', 'lunch', 'dinner', 'snacks', 'totalCalories']) &&
+             data.uid is string &&
+             data.date is string;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      match /workouts/{workoutId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidWorkout(request.resource.data);
+        allow update: if isOwner(userId) && isValidWorkout(request.resource.data);
+      }
+
+      match /quests/{questId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidQuest(request.resource.data);
+        allow update: if isOwner(userId) && isValidQuest(request.resource.data);
+      }
+
+      match /nutrition/{nutritionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidNutrition(request.resource.data);
+        allow update: if isOwner(userId) && isValidNutrition(request.resource.data);
+      }
+    }
+
+    match /mealPlans/{mealPlanId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.uid;
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.uid && isValidMealPlan(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.uid && isValidMealPlan(request.resource.data);
+    }
+
+    match /chats/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+    }
+
+    match /trainingSchedules/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

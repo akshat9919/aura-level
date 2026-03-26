@@ -1,0 +1,5 @@
+{
+  "name": "AuraLevel: Shadow Monarch Edition",
+  "description": "A fitness RPG system that transforms real-world training into a digital Dungeon System using computer vision and adaptive AI coaching.",
+  "requestFramePermissions": ["camera", "microphone", "notifications"]
+}

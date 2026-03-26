@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "The player's profile and RPG stats.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "age": { "type": "integer" },
+        "height": { "type": "number" },
+        "weight": { "type": "number" },
+        "bodyFat": { "type": "number" },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other"] },
+        "class": { "type": "string", "enum": ["Fighter", "Assassin", "Tanker"] },
+        "goal": { "type": "string" },
+        "level": { "type": "integer" },
+        "xp": { "type": "integer" },
+        "rank": { "type": "string" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "strength": { "type": "integer" },
+            "agility": { "type": "integer" },
+            "sense": { "type": "integer" },
+            "vitality": { "type": "integer" }
+          }
+        },
+        "streak": { "type": "integer" },
+        "lastWorkout": { "type": "string", "format": "date-time" },
+        "mana": { "type": "number" },
+        "auraDensity": { "type": "number" },
+        "manaCore": { "type": "number" },
+        "personality": { "type": "string", "enum": ["strict", "sigma", "chad", "humble"] },
+        "units": { "type": "string", "enum": ["metric", "imperial"] }
+      },
+      "required": ["uid", "level", "xp", "rank", "gender", "personality", "units"]
+    },
+    "Workout": {
+      "title": "Workout",
+      "description": "A completed workout session.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "duration": { "type": "integer" },
+        "exercises": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "reps": { "type": "integer" },
+              "sets": { "type": "integer" },
+              "xpGained": { "type": "integer" }
+            }
+          }
+        },
+        "totalXp": { "type": "integer" },
+        "calories": { "type": "number" }
+      }
+    },
+    "Quest": {
+      "title": "Quest",
+      "description": "Daily or penalty quests.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["Daily", "Penalty", "Boss"] },
+        "status": { "type": "string", "enum": ["Active", "Completed", "Failed"] },
+        "rewardXp": { "type": "integer" },
+        "deadline": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Nutrition": {
+      "title": "Nutrition",
+      "description": "Daily nutrition and hydration log.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "calories": { "type": "number" },
+        "protein": { "type": "number" },
+        "fats": { "type": "number" },
+        "carbs": { "type": "number" },
+        "water": { "type": "number" }
+      }
+    },
+    "MealPlan": {
+      "title": "MealPlan",
+      "description": "AI-generated daily meal plan.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "breakfast": { "type": "object" },
+        "lunch": { "type": "object" },
+        "dinner": { "type": "object" },
+        "snacks": { "type": "array" },
+        "totalCalories": { "type": "number" },
+        "totalProtein": { "type": "number" },
+        "totalCarbs": { "type": "number" },
+        "totalFats": { "type": "number" }
+      }
+    },
+    "ChatHistory": {
+      "title": "ChatHistory",
+      "description": "User's chat history with Oracle AI.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "messages": { "type": "array" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "TrainingSchedule": {
+      "title": "TrainingSchedule",
+      "description": "User's training and rest day schedule.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "days": { "type": "array" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/users/{userId}/workouts/{workoutId}": {
+      "schema": "Workout",
+      "description": "User workout history."
+    },
+    "/users/{userId}/quests/{questId}": {
+      "schema": "Quest",
+      "description": "User quests."
+    },
+    "/users/{userId}/nutrition/{nutritionId}": {
+      "schema": "Nutrition",
+      "description": "User nutrition logs."
+    },
+    "/mealPlans/{mealPlanId}": {
+      "schema": "MealPlan",
+      "description": "AI-generated meal plans."
+    },
+    "/chats/{userId}": {
+      "schema": "ChatHistory",
+      "description": "User chat history."
+    },
+    "/trainingSchedules/{userId}": {
+      "schema": "TrainingSchedule",
+      "description": "User training schedules."
+    }
+  }
+}
