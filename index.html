@@ -1,17 +1,178 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>LevelUp Fitness</title>
-    <meta name="theme-color" content="#000000" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="apple-touch-icon" href="https://picsum.photos/seed/fitness/192/192" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuraLevel - Shadow Monarch</title>
 
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #000;
+    color: #fff;
+}
+
+/* Glow effect */
+.glow {
+    box-shadow: 0 0 10px #00D1FF, 0 0 20px #00D1FF;
+}
+
+/* Navbar */
+.nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    background: rgba(0,0,0,0.8);
+    border-bottom: 1px solid #00D1FF;
+}
+
+.nav h1 {
+    color: #00D1FF;
+}
+
+/* Hero */
+.hero {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.hero h2 {
+    font-size: 30px;
+    color: #00D1FF;
+}
+
+/* Button */
+.btn {
+    background: transparent;
+    border: 2px solid #00D1FF;
+    color: #00D1FF;
+    padding: 12px 20px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    background: #00D1FF;
+    color: #000;
+}
+
+/* Cards */
+.container {
+    padding: 20px;
+}
+
+.card {
+    background: rgba(255,255,255,0.05);
+    margin: 15px 0;
+    padding: 20px;
+    border-radius: 10px;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 15px #00D1FF;
+}
+
+/* XP Bar */
+.xp-bar {
+    width: 100%;
+    background: #111;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.xp-fill {
+    width: 60%;
+    height: 10px;
+    background: #00D1FF;
+}
+
+/* Floating AI Button */
+.ai-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #00D1FF;
+    color: #000;
+    padding: 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 15px #00D1FF;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #00D1FF;
+    margin-top: 30px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+    <h1>AuraLevel</h1>
+    <span>Shadow Monarch System</span>
+</div>
+
+<div class="hero">
+    <h2>Do you wish to survive the Red Gate?</h2>
+    <p>Transform your body into a leveling system.</p>
+    <button class="btn">Download APK</button>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h3>👤 Status</h3>
+        <p>Level: 12 | Rank: C</p>
+        <div class="xp-bar">
+            <div class="xp-fill"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>🏋️ Workout System</h3>
+        <p>Adaptive workouts based on your strength, fatigue, and goals.</p>
+    </div>
+
+    <div class="card">
+        <h3>🧠 AI Coach</h3>
+        <p>Get diet, workout, and pain advice in real-time.</p>
+    </div>
+
+    <div class="card">
+        <h3>🎯 Daily Quests</h3>
+        <ul>
+            <li>Complete workout</li>
+            <li>Drink 3L water</li>
+            <li>Hit protein goal</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>📊 Progress Tracking</h3>
+        <p>Track weight, calories, and performance.</p>
+    </div>
+
+    <div class="card">
+        <h3>🎮 Gamification</h3>
+        <p>XP, Levels, Boss fights, Evolution events.</p>
+    </div>
+
+</div>
+
+<div class="ai-btn">AI</div>
+
+<div class="footer">
+    <p>System Active • AuraLevel ©</p>
+</div>
+
+</body>
+</html>
