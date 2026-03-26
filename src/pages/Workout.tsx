@@ -5,7 +5,8 @@ import PoseTracker from '../components/PoseTracker';
 import { Play, Square, CheckCircle, ChevronRight, Info, Timer, Zap, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../firebase';
-import { collection, addDoc, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, increment } from 'firebase/firestore';
+import { userService } from '../services/userService';
 
 const EXERCISES = [
   { 
@@ -90,6 +91,8 @@ const EXERCISES = [
   },
 ];
 
+import { toast } from 'sonner';
+
 const Workout: React.FC = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
@@ -145,56 +148,43 @@ const Workout: React.FC = () => {
     }
 
     timerRef.current = setInterval(() => {
-      setCountdown(prevCountdown => {
-        if (prevCountdown > 0) {
-          const nextVal = prevCountdown - 1;
-          speak(nextVal.toString());
-          if (nextVal === 0) {
-            setSetTimeLeft(60);
-            speak("Go!");
-          }
-          return nextVal;
-        }
-        
-        setSetTimeLeft(prevTimeLeft => {
-          if (prevTimeLeft > 0) {
-            const nextVal = prevTimeLeft - 1;
-            speak(nextVal.toString());
-            if (nextVal === 0) {
-              // We need to trigger handleSetComplete, but we can't do it directly here safely
-              // because it depends on state. We'll use a side effect or just call it.
-              setTimeout(() => handleSetComplete(), 0);
-              return 0;
-            }
-            return nextVal;
-          }
-          return 0;
-        });
-        
-        return 0;
-      });
-
       setTotalElapsed(prev => prev + 1);
+      
+      if (countdown > 0) {
+        const nextVal = countdown - 1;
+        setCountdown(nextVal);
+        if (nextVal > 0) speak(nextVal.toString());
+        if (nextVal === 0) {
+          setSetTimeLeft(60);
+          speak("Go!");
+        }
+      } else if (setTimeLeft > 0) {
+        const nextVal = setTimeLeft - 1;
+        setSetTimeLeft(nextVal);
+        // Only speak every 10 seconds or last 5 seconds to avoid noise
+        if (nextVal > 0 && (nextVal % 10 === 0 || nextVal <= 5)) {
+          speak(nextVal.toString());
+        }
+        if (nextVal === 0) {
+          handleSetComplete();
+        }
+      }
     }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isStarted, isPaused, showSummary]);
+  }, [isStarted, isPaused, showSummary, countdown, setTimeLeft]);
 
   const handleSetComplete = () => {
-    setSets(prevSets => {
-      if (prevSets < currentExerciseRef.current.sets) {
-        setReps(0);
-        setCountdown(10);
-        speak("Set complete. Rest time. 10");
-        return prevSets + 1;
-      } else {
-        // Use a timeout to avoid state update during render/effect loop
-        setTimeout(() => nextExercise(), 0);
-        return prevSets;
-      }
-    });
+    if (sets < currentExerciseRef.current.sets) {
+      setReps(0);
+      setCountdown(10);
+      speak("Set complete. Rest time. 10");
+      setSets(prev => prev + 1);
+    } else {
+      nextExercise();
+    }
   };
 
   const startWorkout = () => {
@@ -246,17 +236,22 @@ const Workout: React.FC = () => {
         calories: totalXp / 5
       });
 
-      const userRef = doc(db, 'users', profile.uid);
-      await updateDoc(userRef, {
-        xp: increment(totalXp),
+      await userService.addXP(profile.uid, profile, totalXp, undefined, {
         streak: increment(1),
         lastWorkout: new Date().toISOString()
+      });
+
+      toast.success('Dungeon Cleared!', {
+        description: `You gained ${totalXp} XP and increased your streak.`,
       });
 
       setShowSummary(true);
       setIsStarted(false);
     } catch (error) {
       console.error("Error finishing workout:", error);
+      toast.error('Failed to save workout', {
+        description: 'Please check your connection and try again.',
+      });
     }
   };
 
@@ -364,50 +359,12 @@ const Workout: React.FC = () => {
             </div>
           </div>
 
-          {/* Middle: Exercise Details + Camera Overlay */}
-          <div className="flex-1 relative min-h-[300px] flex flex-col gap-4">
-            <div className="flex-1 system-window overflow-y-auto bg-black/40 backdrop-blur-sm p-6">
-              <div className="space-y-6">
-                {/* Anatomical Form Demonstration */}
-                <div className="space-y-4">
-                  <div className="system-window bg-accent/5 border-accent/20 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Activity className="text-accent w-5 h-5" />
-                      <h3 className="text-accent text-xs font-black uppercase tracking-[0.2em]">Execution Protocol</h3>
-                    </div>
-                    <p className="text-sm text-text-secondary leading-relaxed italic">
-                      {currentExercise.howTo}
-                    </p>
-                    <div className="mt-6 pt-4 border-t border-accent/10 flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[8px] text-text-secondary uppercase font-bold tracking-widest">Target Area</span>
-                        <span className="text-[10px] font-black text-accent uppercase">{currentExercise.targetArea}</span>
-                      </div>
-                      <div className="text-right flex flex-col">
-                        <span className="text-[8px] text-text-secondary uppercase font-bold tracking-widest">Difficulty Level</span>
-                        <span className="text-[10px] font-black text-accent uppercase">Rank {currentLevel > 10 ? 'S' : currentLevel > 5 ? 'A' : 'B'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-white/5 rounded border border-white/10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Info className="w-4 h-4 text-accent" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-accent">System Tip</span>
-                  </div>
-                  <p className="text-xs text-text-secondary italic">
-                    Focus on your form to maximize Aura gain. The system is monitoring your alignment.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Camera Overlay */}
-            <div className="absolute top-4 right-4 w-24 h-32 border border-accent/40 rounded-lg overflow-hidden bg-black/40 shadow-2xl z-20 group/cam">
+          {/* Middle: Camera Feed (Bigger) + Exercise Info Overlay */}
+          <div className="flex-1 relative min-h-[400px] flex flex-col gap-4">
+            <div className="flex-1 system-window relative overflow-hidden bg-black/40 backdrop-blur-sm p-0">
               {isCameraLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-30">
-                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
               <PoseTracker 
@@ -415,12 +372,21 @@ const Workout: React.FC = () => {
                 exerciseType={currentExercise.id as any} 
                 onRepCount={(count) => setReps(count)} 
                 onReady={() => setIsCameraLoading(false)}
-                minimal
+                sets={sets}
+                minimal={false}
               />
-              <div className="absolute inset-0 pointer-events-none border-2 border-accent/20 rounded-lg" />
-              <div className="absolute top-1 left-1 flex items-center gap-1 px-1 bg-red-500/80 rounded-[2px]">
-                <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                <span className="text-[6px] font-black text-white uppercase tracking-tighter">Live</span>
+              
+              {/* Exercise Info Overlay (Smaller) */}
+              <div className="absolute top-4 left-4 max-w-[200px] pointer-events-none z-10">
+                <div className="system-window bg-black/60 backdrop-blur-md border-accent/20 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="text-accent w-3 h-3" />
+                    <h3 className="text-accent text-[8px] font-black uppercase tracking-[0.2em]">Protocol</h3>
+                  </div>
+                  <p className="text-[10px] text-text-secondary leading-tight italic">
+                    {currentExercise.howTo}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -447,31 +413,30 @@ const Workout: React.FC = () => {
           </div>
 
           {/* Bottom: Stats & Controls */}
-          <div className="grid grid-cols-2 gap-4 h-1/3">
-            <div className="system-window flex flex-col items-center justify-center gap-2">
-              <Activity className="text-accent w-6 h-6" />
-              <p className="text-[10px] text-text-secondary uppercase font-black tracking-widest">Reps</p>
-              <p className="text-5xl font-black italic tracking-tighter glow-text">{reps} <span className="text-lg text-text-secondary">/ {currentExercise.reps}</span></p>
+          <div className="grid grid-cols-2 gap-4 h-32">
+            <div className="system-window flex flex-col items-center justify-center gap-1">
+              <Activity className="text-accent w-5 h-5" />
+              <p className="text-[8px] text-text-secondary uppercase font-black tracking-widest">Reps</p>
+              <p className="text-4xl font-black italic tracking-tighter glow-text">{reps} <span className="text-sm text-text-secondary">/ {currentExercise.reps}</span></p>
             </div>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
               <div className="system-window flex-1 flex flex-col items-center justify-center gap-1">
-                <Timer className="text-accent w-5 h-5" />
+                <Timer className="text-accent w-4 h-4" />
                 <p className="text-[8px] text-text-secondary uppercase font-black tracking-widest">Set Timer</p>
-                <p className="text-2xl font-black italic tracking-tighter text-accent">{formatTime(setTimeLeft)}</p>
-                <p className="text-[8px] text-text-secondary uppercase font-black tracking-widest mt-1">Total: {formatTime(totalElapsed)}</p>
+                <p className="text-xl font-black italic tracking-tighter text-accent">{formatTime(setTimeLeft)}</p>
               </div>
               <button 
                 onClick={nextExercise}
-                className="system-button flex-1 flex items-center justify-center gap-2 text-sm"
+                className="system-button flex-1 flex items-center justify-center gap-2 text-xs"
               >
-                [{currentExerciseIndex === EXERCISES.length - 1 ? 'FINISH' : 'NEXT'}] <ChevronRight className="w-4 h-4" />
+                [{currentExerciseIndex === EXERCISES.length - 1 ? 'FINISH' : 'NEXT'}] <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           </div>
 
           <button 
             onClick={() => setIsStarted(false)}
-            className="py-2 text-[8px] font-black tracking-[0.3em] uppercase text-red-500/40 hover:text-red-500 transition-colors"
+            className="py-1 text-[8px] font-black tracking-[0.3em] uppercase text-red-500/40 hover:text-red-500 transition-colors"
           >
             [ABORT QUEST]
           </button>

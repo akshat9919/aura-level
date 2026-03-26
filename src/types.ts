@@ -35,6 +35,7 @@ export interface UserProfile {
   personality: AIPersonality;
   units: UnitType;
   notificationsEnabled?: boolean;
+  completedQuests?: string[];
 }
 
 export interface Exercise {

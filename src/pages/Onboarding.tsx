@@ -45,6 +45,7 @@ const Onboarding: React.FC = () => {
       manaCore: 1.0,
       personality: 'humble' as const,
       units: 'metric' as const,
+      completedQuests: [],
     };
 
     try {

@@ -57,11 +57,16 @@ const AppRoutes = () => {
   );
 };
 
+import { Toaster } from 'sonner';
+import InstallPrompt from './components/InstallPrompt';
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <ErrorBoundary>
+          <Toaster position="top-center" theme="dark" richColors />
+          <InstallPrompt />
           <NotificationManager />
           <AppRoutes />
         </ErrorBoundary>

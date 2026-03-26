@@ -9,9 +9,10 @@ interface PoseTrackerProps {
   exerciseType: 'squat' | 'pushup' | 'jumping_jack' | 'cobra' | 'plank' | 'lunges' | 'high_knees' | 'burpee';
   isActive: boolean;
   minimal?: boolean;
+  sets?: number;
 }
 
-const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exerciseType, isActive, minimal = false }) => {
+const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exerciseType, isActive, minimal = false, sets = 1 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [reps, setReps] = useState(0);
@@ -20,6 +21,33 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
   const [positionStatus, setPositionStatus] = useState<'ok' | 'too-close' | 'too-far' | 'out-of-frame'>('ok');
   const [isCorrect, setIsCorrect] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const stageRef = useRef<'down' | 'up'>('up');
+  const isActiveRef = useRef(isActive);
+  const lastRepTimeRef = useRef<number>(0);
+
+  // Reset reps when exercise type or set changes
+  useEffect(() => {
+    setReps(0);
+    setStage('up');
+    stageRef.current = 'up';
+    lastRepTimeRef.current = 0;
+  }, [exerciseType, sets]);
+
+  // Sync reps to parent
+  useEffect(() => {
+    if (reps > 0) {
+      onRepCount(reps);
+    }
+  }, [reps]);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -44,7 +72,7 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
     };
 
     pose.onResults((results: Results) => {
-      if (!canvasRef.current || !videoRef.current) return;
+      if (!canvasRef.current || !videoRef.current || !isActiveRef.current) return;
       const canvasCtx = canvasRef.current.getContext('2d');
       if (!canvasCtx) return;
 
@@ -102,6 +130,9 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
 
         // Logic for rep counting
         if (currentStatus === 'ok') {
+          const now = Date.now();
+          const cooldown = 400; // 400ms cooldown between reps
+
           if (exerciseType === 'squat') {
             const hip = landmarks[24];
             const knee = landmarks[26];
@@ -109,18 +140,17 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
             const angle = calculateAngle(hip, knee, ankle);
 
             if (angle > 160) {
-              if (stage === 'down') {
-                setReps((prev) => {
-                  const newReps = prev + 1;
-                  onRepCount(newReps);
-                  return newReps;
-                });
+              if (stageRef.current === 'down' && (now - lastRepTimeRef.current) > cooldown) {
+                setReps((prev) => prev + 1);
+                lastRepTimeRef.current = now;
                 setStage('up');
+                stageRef.current = 'up';
               }
               updateFeedback('Go down');
               setIsCorrect(true);
             } else if (angle < 90) {
               setStage('down');
+              stageRef.current = 'down';
               updateFeedback('Go up');
               setIsCorrect(true);
             }
@@ -131,18 +161,17 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
             const angle = calculateAngle(shoulder, elbow, wrist);
 
             if (angle > 160) {
-              if (stage === 'down') {
-                setReps((prev) => {
-                  const newReps = prev + 1;
-                  onRepCount(newReps);
-                  return newReps;
-                });
+              if (stageRef.current === 'down' && (now - lastRepTimeRef.current) > cooldown) {
+                setReps((prev) => prev + 1);
+                lastRepTimeRef.current = now;
                 setStage('up');
+                stageRef.current = 'up';
               }
               updateFeedback('Lower your body');
               setIsCorrect(true);
             } else if (angle < 90) {
               setStage('down');
+              stageRef.current = 'down';
               updateFeedback('Push up');
               setIsCorrect(true);
             }
@@ -156,18 +185,17 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
             const ankleDist = Math.abs(leftAnkle.x - rightAnkle.x);
 
             if (wristDist > 0.5 && ankleDist > 0.3) {
-              if (stage === 'up') {
-                setReps((prev) => {
-                  const newReps = prev + 1;
-                  onRepCount(newReps);
-                  return newReps;
-                });
+              if (stageRef.current === 'up' && (now - lastRepTimeRef.current) > cooldown) {
+                setReps((prev) => prev + 1);
+                lastRepTimeRef.current = now;
                 setStage('down');
+                stageRef.current = 'down';
               }
               updateFeedback('Jump back in');
               setIsCorrect(true);
             } else if (wristDist < 0.2 && ankleDist < 0.15) {
               setStage('up');
+              stageRef.current = 'up';
               updateFeedback('Jump out!');
               setIsCorrect(true);
             }
@@ -181,23 +209,21 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
             const hipHeight = Math.min(leftHip.y, rightHip.y);
 
             if (kneeHeight < hipHeight + 0.05) {
-              if (stage === 'down') {
-                setReps((prev) => {
-                  const newReps = prev + 1;
-                  onRepCount(newReps);
-                  return newReps;
-                });
+              if (stageRef.current === 'down' && (now - lastRepTimeRef.current) > cooldown) {
+                setReps((prev) => prev + 1);
+                lastRepTimeRef.current = now;
                 setStage('up');
+                stageRef.current = 'up';
               }
               updateFeedback('Switch legs');
               setIsCorrect(true);
-            } else {
+            } else if (kneeHeight > hipHeight + 0.2) {
               setStage('down');
+              stageRef.current = 'down';
               updateFeedback('Knees higher!');
               setIsCorrect(true);
             }
           } else if (exerciseType === 'burpee') {
-            // Simplified burpee: just check for squat to pushup transition
             const hip = landmarks[24];
             const knee = landmarks[26];
             const ankle = landmarks[28];
@@ -209,62 +235,112 @@ const PoseTracker: React.FC<PoseTrackerProps> = ({ onRepCount, onReady, exercise
             const pushupAngle = calculateAngle(shoulder, elbow, wrist);
 
             if (squatAngle < 100 && pushupAngle > 150) {
-              if (stage === 'up') {
-                setReps((prev) => {
-                  const newReps = prev + 1;
-                  onRepCount(newReps);
-                  return newReps;
-                });
+              if (stageRef.current === 'up' && (now - lastRepTimeRef.current) > cooldown) {
+                setReps((prev) => prev + 1);
+                lastRepTimeRef.current = now;
                 setStage('down');
+                stageRef.current = 'down';
               }
               updateFeedback('Jump up!');
               setIsCorrect(true);
             } else if (squatAngle > 160) {
               setStage('up');
+              stageRef.current = 'up';
               updateFeedback('Drop down!');
               setIsCorrect(true);
             }
           }
         }
-    }
-    canvasCtx.restore();
-  });
+      }
+      canvasCtx.restore();
+    });
 
-    if (videoRef.current) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError("Your browser does not support camera access or it is blocked by security settings.");
-        setFeedback("Camera access unsupported");
+    let active = true;
+    let cameraStream: MediaStream | null = null;
+
+    const startCamera = async () => {
+      if (!videoRef.current || !active) return;
+
+      const constraints = [
+        { video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } },
+        { video: { facingMode: { ideal: 'user' } } },
+        { video: { width: { ideal: 640 }, height: { ideal: 480 } } },
+        { video: true }
+      ];
+
+      let stream: MediaStream | null = null;
+      let lastError: any = null;
+
+      for (const constraint of constraints) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraint);
+          if (stream) break;
+        } catch (err) {
+          lastError = err;
+          console.warn("Camera constraint failed:", constraint, err);
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error("No camera found");
+      }
+
+      if (!active) {
+        stream.getTracks().forEach(t => t.stop());
         return;
       }
 
-      const camera = new Camera(videoRef.current, {
-        onFrame: async () => {
-          if (videoRef.current) {
-            try {
-              await pose.send({ image: videoRef.current });
-            } catch (err) {
-              console.error("Pose detection error:", err);
-            }
-          }
-        },
-        width: 640,
-        height: 480,
-      });
+      cameraStream = stream;
+      videoRef.current.srcObject = stream;
       
-      camera.start().then(() => {
-        if (onReady) onReady();
-      }).catch((err: any) => {
-        console.error("Failed to start camera:", err);
+      videoRef.current.onloadedmetadata = () => {
+        if (canvasRef.current && videoRef.current) {
+          canvasRef.current.width = videoRef.current.videoWidth;
+          canvasRef.current.height = videoRef.current.videoHeight;
+        }
+        videoRef.current?.play().catch(e => console.error("Video play failed:", e));
+      };
+
+      let isProcessing = false;
+      const processFrame = async () => {
+        if (!active || !videoRef.current || !isActiveRef.current) return;
+        
+        if (videoRef.current.readyState === 4 && !isProcessing) {
+          isProcessing = true;
+          try {
+            await pose.send({ image: videoRef.current });
+          } catch (err) {
+            console.error("Pose detection error:", err);
+          }
+          isProcessing = false;
+        }
+        
+        if (active) {
+          requestAnimationFrame(processFrame);
+        }
+      };
+
+      requestAnimationFrame(processFrame);
+      if (onReady) onReady();
+    };
+
+    startCamera().catch((err: any) => {
+      console.error("Failed to start camera:", err);
+      if (active) {
         setCameraError(err.message || "Camera access failed");
         setFeedback("Camera not found or access denied");
-        if (onReady) onReady(); // Still call onReady to hide loader
-      });
-    }
+        if (onReady) onReady();
+      }
+    });
 
     return () => {
+      active = false;
       pose.close();
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
     };
-  }, [isActive, exerciseType, stage]);
+  }, [isActive, exerciseType]);
 
   return (
     <div className={`relative w-full h-full overflow-hidden ${minimal ? '' : 'aspect-video rounded-xl glow-border'}`}>

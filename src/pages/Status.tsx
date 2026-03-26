@@ -1,12 +1,16 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { Shield, Zap, Eye, Heart, Trophy, Flame } from 'lucide-react';
+import { Shield, Zap, Eye, Heart, Trophy, Flame, Check } from 'lucide-react';
 import { motion } from 'motion/react';
+import { userService } from '../services/userService';
+
+import { toast } from 'sonner';
 
 const Status: React.FC = () => {
-  const { profile } = useAuth();
+  const [completingQuestId, setCompletingQuestId] = React.useState<string | null>(null);
+  const { profile, user } = useAuth();
 
-  if (!profile) return null;
+  if (!profile || !user) return null;
 
   const xpPercentage = (profile.xp / (profile.level * 1000)) * 100;
   const manaPercentage = (profile.mana / 100) * 100;
@@ -17,6 +21,42 @@ const Status: React.FC = () => {
     { label: 'Sense', value: profile.stats.sense, icon: Eye, color: 'text-purple-500' },
     { label: 'Vitality', value: profile.stats.vitality, icon: Heart, color: 'text-red-500' },
   ];
+
+  const quests = [
+    { 
+      id: 'daily_strength', 
+      title: 'Daily Training: Strength', 
+      reward: '+500 XP / +1 STR',
+      xp: 500,
+      stats: { strength: 1 }
+    },
+    { 
+      id: 'daily_hydration', 
+      title: 'Mana Recharge: Hydration', 
+      reward: '+200 XP / +1 VIT',
+      xp: 200,
+      stats: { vitality: 1 }
+    },
+  ];
+
+  const handleQuestComplete = async (questId: string, xp: number, stats: any) => {
+    if (profile.completedQuests?.includes(questId) || completingQuestId) return;
+    
+    setCompletingQuestId(questId);
+    try {
+      await userService.completeQuest(user.uid, profile, questId, xp, stats);
+      toast.success('Quest Completed!', {
+        description: `You gained ${xp} XP and stat points.`,
+      });
+    } catch (error) {
+      console.error("Error completing quest:", error);
+      toast.error('Failed to complete quest', {
+        description: 'Please try again later.',
+      });
+    } finally {
+      setCompletingQuestId(null);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -103,24 +143,25 @@ const Status: React.FC = () => {
           <div className="text-[10px] text-accent font-bold animate-pulse">[ACTIVE]</div>
         </div>
         <div className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/10 hover:border-accent/30 transition-colors cursor-pointer group">
-            <div className="w-5 h-5 rounded-sm border border-accent/40 flex items-center justify-center group-hover:border-accent">
-              <div className="w-2 h-2 bg-accent scale-0 group-hover:scale-100 transition-transform" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold tracking-tight">Daily Training: Strength</p>
-              <p className="text-[10px] text-accent font-medium mt-0.5">REWARD: +500 XP / +1 STR</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/10 hover:border-accent/30 transition-colors cursor-pointer group">
-            <div className="w-5 h-5 rounded-sm border border-accent/40 flex items-center justify-center group-hover:border-accent">
-              <div className="w-2 h-2 bg-accent scale-0 group-hover:scale-100 transition-transform" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold tracking-tight">Mana Recharge: Hydration</p>
-              <p className="text-[10px] text-accent font-medium mt-0.5">REWARD: +200 XP / +1 VIT</p>
-            </div>
-          </div>
+          {quests.map((quest) => {
+            const isCompleted = profile.completedQuests?.includes(quest.id);
+            const isCompleting = completingQuestId === quest.id;
+            return (
+              <div 
+                key={quest.id}
+                onClick={() => !isCompleted && !isCompleting && handleQuestComplete(quest.id, quest.xp, quest.stats)}
+                className={`flex items-center gap-4 p-4 bg-white/5 rounded-lg border transition-colors cursor-pointer group ${isCompleted ? 'border-accent/20 opacity-60' : 'border-white/10 hover:border-accent/30'} ${isCompleting ? 'animate-pulse cursor-wait' : ''}`}
+              >
+                <div className={`w-5 h-5 rounded-sm border flex items-center justify-center transition-colors ${isCompleted ? 'border-accent bg-accent' : 'border-accent/40 group-hover:border-accent'}`}>
+                  {isCompleted ? <Check className="w-3 h-3 text-black" /> : isCompleting ? <div className="w-2 h-2 border-2 border-accent border-t-transparent rounded-full animate-spin" /> : <div className="w-2 h-2 bg-accent scale-0 group-hover:scale-100 transition-transform" />}
+                </div>
+                <div className="flex-1">
+                  <p className={`text-sm font-bold tracking-tight ${isCompleted ? 'line-through text-text-secondary' : ''}`}>{quest.title}</p>
+                  <p className="text-[10px] text-accent font-medium mt-0.5">REWARD: {quest.reward}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </motion.div>
 
